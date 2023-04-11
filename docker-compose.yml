@@ -1,4 +1,5 @@
 version: '3'
+
 services:
   guacamole:
     image: oznu/guacamole
@@ -9,14 +10,24 @@ services:
       - POSTGRES_DATABASE=guacamole_db
       - POSTGRES_USER=guacamole_user
       - POSTGRES_PASSWORD=guacamole_password
+      - GUACAMOLE_HOME=/config/guacamole
+      - TZ=Europe/London
+    volumes:
+      - ./config:/config
     depends_on:
       - guacd
       - postgres
-    ports:
-      - "8080:8080"
+    labels:
+      # NGINX configuration labels
+      - "traefik.http.routers.guacamole.rule=Host(`example.com`)"
+      - "traefik.http.routers.guacamole.entrypoints=https"
+      - "traefik.http.routers.guacamole.tls=true"
+      - "traefik.http.routers.guacamole.tls.certresolver=myresolver"
+
   guacd:
     image: oznu/guacd
     container_name: guacd
+
   postgres:
     image: postgres
     container_name: postgres
@@ -26,3 +37,15 @@ services:
       - POSTGRES_DB=guacamole_db
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
+
+  nginx:
+    image: nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/letsencrypt
+      - ./nginx/html:/usr/share/nginx/html
+      - ./nginx/logs:/var/log/nginx
